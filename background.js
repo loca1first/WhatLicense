@@ -16,15 +16,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     request.links.forEach(async (link) => {
       const html = await fetchGitHubPage(link.url);
       if (html) {
+        console.log("Fetched HTML for", link.url, "sending to content script for parsing");
         chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
           if (tabs[0]) {
             chrome.tabs.sendMessage(tabs[0].id, {
               action: 'parseLicense',
               url: link.url,
               html: html
+            }, (response) => {
+              if (chrome.runtime.lastError) {
+                console.error("Error sending parseLicense message:", chrome.runtime.lastError);
+              } else {
+                console.log("parseLicense message sent successfully");
+              }
             });
+          } else {
+            console.error("No active tab found when trying to send parseLicense message");
           }
         });
+      } else {
+        console.error("Failed to fetch HTML for", link.url);
       }
     });
   }
