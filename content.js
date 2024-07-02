@@ -1,4 +1,40 @@
-// Add this function to content.js
+console.log("Content script loaded on", window.location.href);
+
+function scanPage() {
+  console.log("Scanning page for GitHub links");
+  const links = scanHackerNews();
+  console.log("Found links:", links);
+  return links;
+}
+
+function scanHackerNews() {
+  const titles = document.querySelectorAll('.titleline > a');
+  const comments = document.querySelectorAll('.comment-tree a');
+  
+  return [...scanLinks(titles), ...scanLinks(comments)];
+}
+
+function scanLinks(elements) {
+  return Array.from(elements)
+    .filter(link => {
+      const href = link.href || '';
+      return href.includes('github.com') || href.includes('githubusercontent.com');
+    })
+    .map(link => ({
+      title: link.textContent,
+      url: link.href,
+      element: link
+    }));
+}
+
+function injectLicense(element, license) {
+  console.log("Injecting license:", license, "for element:", element);
+  const span = document.createElement('span');
+  span.textContent = ` [${license}]`;
+  span.className = 'injected-license';
+  element.parentNode.insertBefore(span, element.nextSibling);
+}
+
 function parseLicense(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -29,13 +65,17 @@ function parseLicense(html) {
   return 'License not found';
 }
 
-// Update the message listener in content.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Received message in content script:", request);
   if (request.action === 'scan') {
-    const links = scanPage();
-    console.log("Sending response:", {links});
-    sendResponse({links});
+    try {
+      const links = scanPage();
+      console.log("Sending response:", {links});
+      sendResponse({links});
+    } catch (error) {
+      console.error("Error in scanPage:", error);
+      sendResponse({error: error.message});
+    }
   } else if (request.action === 'parseLicense') {
     const license = parseLicense(request.html);
     console.log("Parsed license:", license, "for", request.url);
@@ -54,3 +94,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return true; // Indicates that the response is sent asynchronously
 });
+
+// Immediately log the initial scan results when the script loads
+console.log("Initial scan results:", scanPage());
