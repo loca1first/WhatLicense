@@ -1,3 +1,4 @@
+
 {
   "manifest_version": 2,
   "name": "License Scanner for HN and Reddit",
@@ -24,3 +25,4 @@
     "default_popup": "popup.html"
   }
 }
+ 
