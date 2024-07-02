@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log("Scraped license:", license, "for", link.url);
       chrome.tabs.sendMessage(sender.tab.id, {
         action: 'injectLicense',
-        element: link.element,
+        url: link.url,
         license: license
       });
       chrome.runtime.sendMessage({
