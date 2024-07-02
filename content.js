@@ -1,37 +1,25 @@
+console.log("Content script loaded on", window.location.href);
+
 function scanPage() {
   console.log("Scanning page for GitHub links");
-  const isHackerNews = window.location.hostname === 'news.ycombinator.com';
-  const isReddit = window.location.hostname === 'www.reddit.com';
-  
-  let links = [];
-  
-  if (isHackerNews) {
-    links = scanHackerNews();
-  } else if (isReddit) {
-    links = scanReddit();
-  }
-  
+  const links = scanHackerNews();
   console.log("Found links:", links);
   return links;
 }
 
 function scanHackerNews() {
-  const titles = document.querySelectorAll('.titlelink');
+  const titles = document.querySelectorAll('.titleline > a');
   const comments = document.querySelectorAll('.comment-tree a');
-  
-  return [...scanLinks(titles), ...scanLinks(comments)];
-}
-
-function scanReddit() {
-  const titles = document.querySelectorAll('a[data-click-id="body"]');
-  const comments = document.querySelectorAll('.comment a');
   
   return [...scanLinks(titles), ...scanLinks(comments)];
 }
 
 function scanLinks(elements) {
   return Array.from(elements)
-    .filter(link => link.href.includes('github.com'))
+    .filter(link => {
+      const href = link.href || '';
+      return href.includes('github.com') || href.includes('githubusercontent.com');
+    })
     .map(link => ({
       title: link.textContent,
       url: link.href,
@@ -40,6 +28,7 @@ function scanLinks(elements) {
 }
 
 function injectLicense(element, license) {
+  console.log("Injecting license:", license, "for element:", element);
   const span = document.createElement('span');
   span.textContent = ` [${license}]`;
   span.className = 'injected-license';
@@ -53,8 +42,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Sending response:", {links});
     sendResponse({links});
   } else if (request.action === 'injectLicense') {
-    const element = request.element;
-    injectLicense(element, request.license);
+    const element = document.querySelector(`a[href="${request.url}"]`);
+    if (element) {
+      injectLicense(element, request.license);
+    } else {
+      console.error("Element not found for URL:", request.url);
+    }
   }
   return true; // Indicates that the response is sent asynchronously
 });
+
+// Immediately scan the page when the script loads
+const initialLinks = scanPage();
+console.log("Initial scan results:", initialLinks);
