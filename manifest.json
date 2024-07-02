@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "name": "License Scanner for HN and Reddit",
+  "version": "1.0",
+  "description": "Scans Hacker News and Reddit for GitHub submissions and displays their licenses beside the links",
+  "permissions": [
+    "activeTab",
+    "https://news.ycombinator.com/*",
+    "https://www.reddit.com/*",
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.ycombinator.com/*", "https://*.reddit.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "browser_action": {
+    "default_popup": "popup.html"
+  }
+}
