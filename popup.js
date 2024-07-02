@@ -1,55 +1,32 @@
-async function scrapeGitHubLicense(url) {
-  try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-
-    // Check for license in repository sidebar
-    const sidebarLicense = doc.querySelector('.octicon-law + span');
-    if (sidebarLicense) {
-      return sidebarLicense.textContent.trim();
+document.getElementById('scanButton').addEventListener('click', () => {
+  console.log("Scan button clicked");
+  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+    if (tabs[0]) {
+      console.log("Sending scan message to tab:", tabs[0].id);
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'scan'}, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error sending message:", chrome.runtime.lastError);
+          return;
+        }
+        console.log("Received response:", response);
+        if (response && response.links && response.links.length > 0) {
+          chrome.runtime.sendMessage({action: 'fetchLicenses', links: response.links});
+        } else {
+          console.log("No GitHub links found or invalid response");
+        }
+      });
+    } else {
+      console.error("No active tab found");
     }
-
-    // Check for license file in root directory
-    const licenseFile = doc.querySelector('a[title="LICENSE"]');
-    if (licenseFile) {
-      return "License file found (details not available)";
-    }
-
-    // Check README for license information
-    const readme = doc.querySelector('#readme');
-    if (readme) {
-      const readmeText = readme.textContent.toLowerCase();
-      if (readmeText.includes('mit license')) return 'MIT';
-      if (readmeText.includes('apache license')) return 'Apache';
-      if (readmeText.includes('gpl') || readmeText.includes('gnu general public license')) return 'GPL';
-      if (readmeText.includes('bsd license')) return 'BSD';
-      if (readmeText.includes('mozilla public license')) return 'MPL';
-    }
-
-    return 'License not found';
-  } catch (error) {
-    console.error('Error scraping license:', error);
-    return 'Error';
-  }
-}
+  });
+});
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'fetchLicenses') {
-    request.links.forEach(async (link) => {
-      const license = await scrapeGitHubLicense(link.url);
-      chrome.tabs.sendMessage(sender.tab.id, {
-        action: 'injectLicense',
-        element: link.element,
-        license: license
-      });
-      chrome.runtime.sendMessage({
-        action: 'updateLicense',
-        title: link.title,
-        license: license
-      });
-    });
+  if (request.action === 'updateLicense') {
+    console.log("Updating license in popup:", request);
+    const resultsList = document.getElementById('results');
+    const listItem = document.createElement('li');
+    listItem.textContent = `${request.title}: ${request.license}`;
+    resultsList.appendChild(listItem);
   }
-  return true; // Indicates that the response is sent asynchronously
 });
