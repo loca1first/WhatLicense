@@ -1,4 +1,5 @@
 async function scrapeGitHubLicense(url) {
+  console.log("Scraping license for:", url);
   try {
     const response = await fetch(url);
     const html = await response.text();
@@ -36,9 +37,11 @@ async function scrapeGitHubLicense(url) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Received message in background script:", request);
   if (request.action === 'fetchLicenses') {
     request.links.forEach(async (link) => {
       const license = await scrapeGitHubLicense(link.url);
+      console.log("Scraped license:", license, "for", link.url);
       chrome.tabs.sendMessage(sender.tab.id, {
         action: 'injectLicense',
         element: link.element,
