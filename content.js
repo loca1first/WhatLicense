@@ -1,4 +1,5 @@
 function scanPage() {
+  console.log("Scanning page for GitHub links");
   const isHackerNews = window.location.hostname === 'news.ycombinator.com';
   const isReddit = window.location.hostname === 'www.reddit.com';
   
@@ -10,6 +11,7 @@ function scanPage() {
     links = scanReddit();
   }
   
+  console.log("Found links:", links);
   return links;
 }
 
@@ -45,10 +47,14 @@ function injectLicense(element, license) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Received message in content script:", request);
   if (request.action === 'scan') {
-    sendResponse(scanPage());
+    const links = scanPage();
+    console.log("Sending response:", {links});
+    sendResponse({links});
   } else if (request.action === 'injectLicense') {
     const element = request.element;
     injectLicense(element, request.license);
   }
+  return true; // Indicates that the response is sent asynchronously
 });
